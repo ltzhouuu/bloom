@@ -4,11 +4,22 @@
 
 一场由 **Three.js 粒子系统** 与 **MediaPipe Hands** 驱动的实时手势花园。手掌被摄像头捕捉后，21 个手部关键点会转化为一朵会呼吸的光粒子花：握拳时花瓣收拢成发光的苞，张掌时粒子向外绽放，花朵随掌心移动，并在指尖留下一枚微光。
 
+**在线体验：https://ltzhouuu.github.io/fingertip-bloom/**  
+**源码仓库：https://github.com/ltzhouuu/fingertip-bloom**
+
 ![指尖生花桌面预览](./docs/preview-desktop.png)
 
 <p align="center">
   <img src="./docs/preview-mobile.png" width="330" alt="指尖生花移动端预览" />
 </p>
+
+## 在线访问
+
+- GitHub Pages：**https://ltzhouuu.github.io/fingertip-bloom/**
+- 直接演示（免摄像头）：**https://ltzhouuu.github.io/fingertip-bloom/?demo=1**
+- GitHub Pages 已启用 HTTPS，摄像头权限可直接在浏览器中请求；访问者的视频流仍然只在本地处理。
+
+
 
 ## 快速开始
 
@@ -85,6 +96,7 @@ $env:PORT=8080; node server.mjs
 ```text
 finger-bloom/
 ├── index.html                 # 页面骨架与无障碍文案
+├── .nojekyll                  # GitHub Pages 直接按静态文件发布
 ├── styles/main.css            # 视觉系统、响应式布局、动效
 ├── src/
 │   ├── main.js                # 状态机、界面绑定、输入与动画循环
@@ -92,12 +104,13 @@ finger-bloom/
 │   ├── handTracker.js         # 摄像头、MediaPipe 初始化与推理循环
 │   ├── gesture.js             # 21 关键点 → 五指伸展度 → openness
 │   └── utils.js               # 阻尼、钳制、随机数等小工具
-├── server.mjs                 # 零依赖静态 HTTP 服务
+├── server.mjs                 # 本地零依赖静态 HTTP 服务
 ├── vendor/
 │   ├── three/                 # Three.js r169 与 bloom 后处理依赖
 │   └── mediapipe/             # Hands 运行库、WASM、模型与资源
 ├── docs/                      # README 预览图
 └── tools/
+    ├── deploy-pages.mjs       # 通过 GitHub API 发布到 Pages（需要临时 token）
     ├── fetch-vendor.mjs       # 重新下载 vendor 依赖（需要网络）
     ├── test-gestures.mjs      # 用 MediaPipe 官方关键点样本验证手势分类
     └── fixtures/              # 官方手势样本（Apache 2.0，离线可用）
