@@ -3,7 +3,7 @@
  *
  * Usage (PowerShell):
  *   $env:GITHUB_TOKEN = "github_pat_..."
- *   $env:REPO_NAME = "fingertip-bloom"   # optional
+ *   $env:REPO_NAME = "bloom"   # optional
  *   node tools/deploy-pages.mjs
  *
  * The token is read from the environment and never printed.
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-const REPO_NAME = process.env.REPO_NAME || 'fingertip-bloom';
+const REPO_NAME = process.env.REPO_NAME || 'bloom';
 const OWNER = process.env.GITHUB_OWNER || '';
 const BRANCH = process.env.BRANCH || 'main';
 const API = 'https://api.github.com';
@@ -37,7 +37,7 @@ async function github(path, options = {}) {
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${TOKEN}`,
-          'User-Agent': 'fingertip-bloom-pages-deploy',
+          'User-Agent': 'bloom-pages-deploy',
           'X-GitHub-Api-Version': '2022-11-28',
           ...(fetchOptions.headers || {}),
         },
