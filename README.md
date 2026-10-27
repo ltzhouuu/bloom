@@ -18,6 +18,7 @@
 - GitHub Pages：**https://ltzhouuu.github.io/bloom/**
 - 直接演示（免摄像头）：**https://ltzhouuu.github.io/bloom/?demo=1**
 - GitHub Pages 已启用 HTTPS，摄像头权限可直接在浏览器中请求；访问者的视频流仍然只在本地处理。
+- 首次点击「开启手势体验」时，浏览器需要下载约 8 MB 的手部模型；GitHub Pages 在部分网络下约需 20–30 秒。页面会显示加载说明，超过 12 秒会提供「先使用指针预览」按钮，不会无限卡住。
 
 
 
