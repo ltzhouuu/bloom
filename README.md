@@ -4,8 +4,8 @@
 
 一场由 **Three.js 粒子系统** 与 **MediaPipe Hands** 驱动的实时手势花园。手掌被摄像头捕捉后，21 个手部关键点会转化为一朵会呼吸的光粒子花：握拳时花瓣收拢成发光的苞，张掌时粒子向外绽放，花朵随掌心移动，并在指尖留下一枚微光。
 
-**在线体验：https://ltzhouuu.github.io/fingertip-bloom/**  
-**源码仓库：https://github.com/ltzhouuu/fingertip-bloom**
+**在线体验：https://ltzhouuu.github.io/bloom/**  
+**源码仓库：https://github.com/ltzhouuu/bloom**
 
 ![指尖生花桌面预览](./docs/preview-desktop.png)
 
@@ -15,8 +15,8 @@
 
 ## 在线访问
 
-- GitHub Pages：**https://ltzhouuu.github.io/fingertip-bloom/**
-- 直接演示（免摄像头）：**https://ltzhouuu.github.io/fingertip-bloom/?demo=1**
+- GitHub Pages：**https://ltzhouuu.github.io/bloom/**
+- 直接演示（免摄像头）：**https://ltzhouuu.github.io/bloom/?demo=1**
 - GitHub Pages 已启用 HTTPS，摄像头权限可直接在浏览器中请求；访问者的视频流仍然只在本地处理。
 
 
