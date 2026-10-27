@@ -2,6 +2,12 @@ import { analyseHand } from './gesture.js';
 
 const MEDIAPIPE_BASE = new URL('../vendor/mediapipe/', import.meta.url);
 
+function createAbortError() {
+  const error = new Error('摄像头启动已取消');
+  error.name = 'AbortError';
+  return error;
+}
+
 function loadScript(src, timeout = 45_000) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector('script[data-hand-engine]');
@@ -72,6 +78,7 @@ export class HandTracker {
     this.hands = null;
     this.stream = null;
     this.active = false;
+    this.cancelled = false;
     this.sending = false;
     this.raf = 0;
     this.lastSend = 0;
@@ -81,6 +88,7 @@ export class HandTracker {
   }
 
   async start() {
+    this.cancelled = false;
     if (!window.isSecureContext) {
       throw new Error('摄像头需要安全上下文。请通过 http://localhost 或 HTTPS 访问。');
     }
@@ -104,6 +112,11 @@ export class HandTracker {
       throw new Error(describeCameraError(error));
     }
 
+    if (this.cancelled) {
+      this.releaseStream();
+      throw createAbortError();
+    }
+
     this.video.srcObject = this.stream;
     this.video.muted = true;
     this.video.playsInline = true;
@@ -115,9 +128,17 @@ export class HandTracker {
     }
 
     await this.waitForVideo();
+    if (this.cancelled) {
+      this.releaseStream();
+      throw createAbortError();
+    }
 
-    this.onStatus({ phase: 'model', message: '正在唤醒手势识别引擎' });
+    this.onStatus({ phase: 'model', message: '正在下载手势识别引擎' });
     await loadScript(new URL('hands.js', MEDIAPIPE_BASE).href, 45_000);
+    if (this.cancelled) {
+      this.releaseStream();
+      throw createAbortError();
+    }
 
     if (!window.Hands) {
       throw new Error('手势识别引擎没有正确初始化，请刷新后重试。');
@@ -128,16 +149,23 @@ export class HandTracker {
     });
     this.hands.setOptions({
       maxNumHands: 1,
-      modelComplexity: 1,
+      // The lite model is noticeably smaller and loads much faster over
+      // GitHub Pages / mobile networks. Landmark quality is still ample for
+      // coarse gesture classification.
+      modelComplexity: 0,
       minDetectionConfidence: 0.62,
       minTrackingConfidence: 0.58,
       selfieMode: false,
     });
     this.hands.onResults((results) => this.handleResults(results));
 
-    this.onStatus({ phase: 'warming', message: '正在让花园适应你的手' });
+    this.onStatus({ phase: 'warming', message: '正在下载手部模型（首次加载约 20–30 秒）' });
     if (typeof this.hands.initialize === 'function') {
       await this.hands.initialize();
+    }
+    if (this.cancelled) {
+      this.releaseStream();
+      throw createAbortError();
     }
 
     this.active = true;
@@ -149,6 +177,12 @@ export class HandTracker {
       width: this.video.videoWidth,
       height: this.video.videoHeight,
     };
+  }
+
+  releaseStream() {
+    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stream = null;
+    if (this.video.srcObject) this.video.srcObject = null;
   }
 
   waitForVideo() {
@@ -247,10 +281,9 @@ export class HandTracker {
 
   stop() {
     this.active = false;
+    this.cancelled = true;
     window.cancelAnimationFrame(this.raf);
-    this.stream?.getTracks().forEach((track) => track.stop());
-    this.stream = null;
-    if (this.video.srcObject) this.video.srcObject = null;
+    this.releaseStream();
     try {
       this.hands?.close?.();
     } catch {
