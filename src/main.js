@@ -27,6 +27,8 @@ const elements = {
   inputVideo: $('#inputVideo'),
   boot: $('#boot'),
   bootText: $('#bootText'),
+  bootHint: $('#bootHint'),
+  bootCancel: $('#bootCancelButton'),
   guideDialog: $('#guideDialog'),
   closeGuide: $('#closeGuideButton'),
   guideDone: $('#guideDoneButton'),
@@ -100,6 +102,7 @@ const state = {
   cameraHidden: false,
   bootVisible: false,
   starting: false,
+  startAttempt: 0,
   lastNow: performance.now(),
   tracker: null,
 };
@@ -114,6 +117,22 @@ const pointerGlow = {
   x: -200,
   y: -200,
 };
+
+const bootWatchTimers = new Set();
+
+function clearBootWatch() {
+  for (const timer of bootWatchTimers) window.clearTimeout(timer);
+  bootWatchTimers.clear();
+}
+
+function scheduleBootWatch(delay, callback) {
+  const timer = window.setTimeout(() => {
+    bootWatchTimers.delete(timer);
+    callback();
+  }, delay);
+  bootWatchTimers.add(timer);
+  return timer;
+}
 
 function setText(node, value) {
   if (!node) return;
@@ -132,14 +151,46 @@ function setStarted(started) {
 }
 
 function showBoot(message) {
+  clearBootWatch();
   state.bootVisible = true;
   elements.bootText.textContent = message;
+  elements.bootHint.textContent = '首次加载需下载约 8 MB 手部模型，网络较慢时约需 20–30 秒。';
+  elements.bootCancel.hidden = true;
   elements.boot.hidden = false;
 }
 
 function hideBoot() {
+  clearBootWatch();
   state.bootVisible = false;
   elements.boot.hidden = true;
+}
+
+function abandonCameraAttempt() {
+  state.startAttempt += 1;
+  state.starting = false;
+  setStarting(false);
+  const tracker = state.tracker;
+  state.tracker = null;
+  tracker?.stop();
+}
+
+function cancelCameraStart() {
+  if (state.mode !== 'loading' || !state.bootVisible) return;
+  abandonCameraAttempt();
+  hideBoot();
+  startDemo();
+}
+
+function failCameraStart(message) {
+  abandonCameraAttempt();
+  hideBoot();
+  setMode('attract');
+  showStartError(message);
+  elements.startCameraLabel.textContent = '再试一次';
+  elements.startCamera.disabled = false;
+  elements.cameraHud.setAttribute('aria-hidden', 'true');
+  elements.cameraButton.classList.add('is-off');
+  elements.cameraButton.setAttribute('aria-pressed', 'false');
 }
 
 function setStarting(starting) {
@@ -211,6 +262,7 @@ function startCameraExperience() {
   state.pointer.down = false;
   elements.pointerGlow.classList.remove('is-visible');
 
+  const attempt = ++state.startAttempt;
   const tracker = new HandTracker({
     video: elements.inputVideo,
     onResult: handleTrackingResult,
@@ -218,9 +270,30 @@ function startCameraExperience() {
   });
   state.tracker = tracker;
 
+  scheduleBootWatch(8000, () => {
+    if (state.startAttempt !== attempt || !state.bootVisible) return;
+    elements.bootHint.textContent = '模型正在下载中，首次打开会久一点，请保持页面打开…';
+  });
+  scheduleBootWatch(12000, () => {
+    if (state.startAttempt !== attempt || !state.bootVisible) return;
+    elements.bootCancel.hidden = false;
+  });
+  scheduleBootWatch(30000, () => {
+    if (state.startAttempt !== attempt || !state.bootVisible) return;
+    elements.bootHint.textContent = '网络似乎有点慢。你可以继续等待，或先使用指针预览。';
+  });
+  scheduleBootWatch(95000, () => {
+    if (state.startAttempt !== attempt || !state.bootVisible) return;
+    failCameraStart('手势模型加载超时，请检查网络后重试，或使用指针预览。');
+  });
+
   tracker
     .start()
     .then(({ width, height }) => {
+      if (state.startAttempt !== attempt || state.mode !== 'loading') {
+        tracker.stop();
+        return;
+      }
       state.starting = false;
       state.handPresent = false;
       state.lastHandAt = 0;
@@ -249,19 +322,15 @@ function startCameraExperience() {
       elements.gesturePanel.focus?.({ preventScroll: true });
     })
     .catch((error) => {
+      if (state.startAttempt !== attempt || error?.name === 'AbortError' || state.mode !== 'loading') {
+        tracker.stop();
+        return;
+      }
       console.error('[bloom] camera start failed', error);
       tracker.stop();
       state.tracker = null;
       state.starting = false;
-      setStarting(false);
-      setMode('attract');
-      hideBoot();
-      showStartError(error.message || '摄像头没有准备好，请稍后重试。');
-      elements.startCameraLabel.textContent = '再试一次';
-      elements.startCamera.disabled = false;
-      elements.cameraHud.setAttribute('aria-hidden', 'true');
-      elements.cameraButton.classList.add('is-off');
-      elements.cameraButton.setAttribute('aria-pressed', 'false');
+      failCameraStart(error.message || '摄像头没有准备好，请稍后重试。');
     });
 }
 
@@ -709,6 +778,7 @@ function animate(now) {
 function bindEvents() {
   elements.startCamera.addEventListener('click', startCameraExperience);
   elements.demoButton.addEventListener('click', startDemo);
+  elements.bootCancel.addEventListener('click', cancelCameraStart);
   elements.guideButton.addEventListener('click', openGuide);
   elements.closeGuide.addEventListener('click', closeGuide);
   elements.guideDone.addEventListener('click', closeGuide);
